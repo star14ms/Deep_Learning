@@ -1,7 +1,7 @@
 # coding: utf-8 '###': 실수한 부분
 
-import sys, os
-sys.path.append(os.pardir)
+# import sys, os
+# sys.path.append(os.pardir)
 
 import numpy as np
 from dataset.mnist import load_mnist
@@ -13,11 +13,11 @@ import datetime as dt
 from modules.save_list import *
 from selenium import webdriver
 
-start = t.time()
-
+# mnist 데이터 읽기
 (x_train, t_train), (x_test, t_test) = load_mnist(normalize=True, flatten=False, one_hot_label=True)
 network = DeepConvNet()
 
+# 네트워크로 주고받는 데이터의 비트 수 줄이기 64bit -> 16bit
 x_train = x_train.astype(np.float16)
 t_train = t_train.astype(np.float16)
 x_test = x_test.astype(np.float16)
@@ -25,14 +25,18 @@ t_test = t_test.astype(np.float16) ### x_test =
 for param in network.params.values():
     param[...] = param.astype(np.float16)
 
-optimizer='Nesterov'
+start = t.time()
+
+# 학습
+optimizer='Adagrad'# 매개변수 최적화 방법 선택 (SGD, Momentum, AdaGrad, Adam, Nesterov, RMSprop) 
 trainer = Trainer(network, x_train, t_train, x_test, t_test,
                   epochs=1, mini_batch_size=100,
                   optimizer=optimizer, optimizer_param={'lr':0.001},
                   evaluate_sample_num_per_epoch=1000, verbose=True)
-trainer.train()
+trainer.train() # 학습 시작
 
-file_name = f'{optimizer}_c2_f64'
+# 손실 함수, 정확도 변화 리스트 저장
+file_name = f'{optimizer}_c2_f64_norm'
 save_list_to_file(trainer.train_loss_list, f"{file_name}_train_loss_list")
 # save_list_to_file(trainer.train_acc_list, f"{file_name}_train_acc_list")
 # save_list_to_file(trainer.test_acc_list, f"{file_name}_test_acc_list")
@@ -52,7 +56,7 @@ driver.get(f'https://vclock.kr/#time={alarm_time}&title=%EC%95%8C%EB%9E%8C&sound
 driver.find_element_by_xpath('//*[@id="pnl-main"]').click()
 
 # 그래프 출력하기
-plot_accuracy_graph(trainer.train_acc_list, trainer.test_acc_list)
-plt.show()
 plot_loss_graph(trainer.train_loss_list)
 plt.show()
+# plot_accuracy_graph(trainer.train_acc_list, trainer.test_acc_list)
+# plt.show()

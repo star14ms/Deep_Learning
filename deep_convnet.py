@@ -13,7 +13,7 @@ class DeepConvNet:
         'conv', 'relu', 'conv', 'relu', 'pool', # 'conv', 'relu',
         'conv', 'relu', 'conv', 'relu', 'pool',
         'conv', 'relu', 'conv', 'relu', 'pool',
-        'affine', 'relu', 'dropout', 'affine', 'dropout', 'softmax'], params = [(1, 28, 28),
+        'affine', 'norm', 'relu', 'dropout', 'affine', 'dropout', 'softmax'], params = [(1, 28, 28),
         {'filter_num':16, 'filter_size':3, 'pad':1, 'stride':1},
         {'filter_num':16, 'filter_size':3, 'pad':1, 'stride':1},
 
@@ -116,6 +116,11 @@ class DeepConvNet:
                 self.layer_idxs_used_params.append(layer_idx)
                 idx += 1
 
+            elif layer == 'norm' or layer == 'batchnorm':
+                self.params['gamma' + str(idx)] = np.ones(pre_node_nums[idx])
+                self.params['beta' + str(idx)] = np.zeros(pre_node_nums[idx])
+                self.layers.append(BatchNormalization(self.params['gamma' + str(idx)], self.params['beta' + str(idx)]))
+                
             elif layer == 'relu':
                 self.layers.append(Relu())
             elif layer == 'pool' or layer == 'pooling':
@@ -128,10 +133,12 @@ class DeepConvNet:
                 print(f"\nError: Undefined function.({layer})\n")
                 return False
 
+        # print(self.layers)
+
     def predict(self, x, train_flg=False):
         for layer in self.layers:
             # print(layer)
-            if isinstance(layer, Dropout):
+            if isinstance(layer, Dropout) or isinstance(layer, BatchNormalization):
                 x = layer.forward(x, train_flg)
             else:
                 x = layer.forward(x)
@@ -173,6 +180,10 @@ class DeepConvNet:
         for i, layer_idx in enumerate(self.layer_idxs_used_params):
             grads['W' + str(i+1)] = self.layers[layer_idx].dW
             grads['b' + str(i+1)] = self.layers[layer_idx].db
+            
+            if type(self.layers[layer_idx+1]) == BatchNormalization:
+                grads['gamma' + str(i+1)] = self.layers[layer_idx+1].dgamma
+                grads['beta' + str(i+1)] = self.layers[layer_idx+1].dbeta
 
         return grads
 
